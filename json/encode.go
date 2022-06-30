@@ -15,17 +15,28 @@ func Encode(data string) ([]string, error) {
 
 	var output []string
 	for key, value := range raw {
-		result := key
-		switch v := value.(type) {
-		case string:
-			result += fmt.Sprintf(`="%s"`, v)
-		case int, int32, int64, float32, float64, bool:
-			result += fmt.Sprintf("=%v", v)
-		default:
-			return nil, fmt.Errorf("can't handle a value of this type yet\n%v: %T", v, v)
-		}
-		output = append(output, result)
+		output = append(output, parse(value, key)...)
 	}
 
 	return output, nil
+}
+
+func parse(data interface{}, key string) []string {
+	var output []string
+	switch v := data.(type) {
+	case string:
+		output = append(output, fmt.Sprintf(`%s="%s"`, key, v))
+	case int, int32, int64, float32, float64, bool:
+		output = append(output, fmt.Sprintf("%s=%v", key, v))
+	case []interface{}:
+		for i, val := range v {
+			output = append(output, parse(val, fmt.Sprintf("%s[%v]", key, i))...)
+		}
+	case map[string]interface{}:
+		for k, val := range v {
+			output = append(output, parse(val, fmt.Sprintf("%s/%s", key, k))...)
+		}
+	}
+
+	return output
 }
