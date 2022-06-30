@@ -62,8 +62,6 @@ func TestSimpleEncode(t *testing.T) {
 		return
 	}
 
-	// TODO: fix failing tests
-
 	// TODO: make sure this covers all cases
 	for _, v := range want {
 		found := false
