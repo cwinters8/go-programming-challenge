@@ -7,7 +7,7 @@ import (
 	"challenge/json"
 )
 
-func TestStringEncode(t *testing.T) {
+func TestSimpleEncode(t *testing.T) {
 	got, err := json.Encode(`{"car": "Acura"}`)
 	if err != nil {
 		t.Error("encoding failed: " + err.Error())
@@ -27,7 +27,7 @@ func TestStringEncode(t *testing.T) {
 	}
 }
 
-func TestSimpleEncode(t *testing.T) {
+func TestEncode(t *testing.T) {
 	got, err := json.Encode(`
 		{
 			"age": 35,
@@ -38,6 +38,11 @@ func TestSimpleEncode(t *testing.T) {
 				"horses": 4,
 				"dogs": 3,
 				"cats": 3
+			},
+			"animals": {
+				"horses": ["Percy", "Quinn", "Bravo", "Rhea"],
+				"dogs": ["Four", "Hush", "Riley"],
+				"cats": ["Fang", "Minerva", "Charlie"]
 			}
 		}`)
 	if err != nil {
@@ -55,14 +60,23 @@ func TestSimpleEncode(t *testing.T) {
 		`animal_counts/horses=4`,
 		`animal_counts/dogs=3`,
 		`animal_counts/cats=3`,
+		`animals/horses[0]="Percy"`,
+		`animals/horses[1]="Quinn"`,
+		`animals/horses[2]="Bravo"`,
+		`animals/horses[3]="Rhea"`,
+		`animals/dogs[0]="Four"`,
+		`animals/dogs[1]="Hush"`,
+		`animals/dogs[2]="Riley"`,
+		`animals/cats[0]="Fang"`,
+		`animals/cats[1]="Minerva"`,
+		`animals/cats[2]="Charlie"`,
 	}
 	msg := fmt.Sprintf("got: %v, want: %v", got, want)
 	if len(got) != len(want) {
-		t.Error(msg) // TODO: make error message more specific here
+		t.Error(msg)
 		return
 	}
 
-	// TODO: make sure this covers all cases
 	for _, v := range want {
 		found := false
 		for _, val := range got {
