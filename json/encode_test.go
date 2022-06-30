@@ -7,7 +7,7 @@ import (
 	"challenge/json"
 )
 
-func TestSimpleStringEncode(t *testing.T) {
+func TestStringEncode(t *testing.T) {
 	got, err := json.Encode(`{"car": "Acura"}`)
 	if err != nil {
 		t.Error("encoding failed: " + err.Error())
@@ -27,13 +27,13 @@ func TestSimpleStringEncode(t *testing.T) {
 	}
 }
 
-func TestSimpleNumEncode(t *testing.T) {
-	got, err := json.Encode(`{"age": 35, "weight": 165.5}`)
+func TestSimpleEncode(t *testing.T) {
+	got, err := json.Encode(`{"age": 35, "weight": 165.5, "smoker": false}`)
 	if err != nil {
 		t.Error("encoding failed: " + err.Error())
 		return
 	}
-	want := []string{"age=35", "weight=165.5"}
+	want := []string{"age=35", "weight=165.5", "smoker=false"}
 	msg := fmt.Sprintf("got: %v, want: %v", got, want)
 	if len(got) != len(want) {
 		t.Error(msg)
