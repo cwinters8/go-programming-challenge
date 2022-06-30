@@ -18,9 +18,11 @@ func Encode(data string) ([]string, error) {
 		result := key
 		switch v := value.(type) {
 		case string:
-			result += fmt.Sprintf("=\"%s\"", v)
+			result += fmt.Sprintf(`="%s"`, v)
+		case int, int32, int64, float32, float64:
+			result += fmt.Sprintf("=%v", v)
 		default:
-			return nil, fmt.Errorf("can't handle a value of this type yet\n%v", v)
+			return nil, fmt.Errorf("can't handle a value of this type yet\n%v: %T", v, v)
 		}
 		output = append(output, result)
 	}
