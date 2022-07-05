@@ -3,47 +3,31 @@ package json
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 )
 
 func Decode(data []string) (string, error) {
 	structuredData := make(map[string]interface{})
-	for _, val := range data {
-		values := strings.Split(val, "=")
-		k := values[0]
-		v := values[1]
-		var key string
-		index := 0
-		leftBracketIndex := -1
-		rightBracketIndex := -1
-		for index < len(k) {
-			char := string(k[index])
-			if char == "[" {
-				leftBracketIndex = index
-			} else if char == "]" {
-				rightBracketIndex = index
-			}
-			if leftBracketIndex > -1 && rightBracketIndex > -1 {
-				break
-			}
-			index++
-			if leftBracketIndex > -1 {
-				continue
-			}
-			key += char
-		}
-		value := strings.TrimPrefix(v, `"`)
-		value = strings.TrimSuffix(value, `"`)
-		if leftBracketIndex > -1 && rightBracketIndex > -1 {
-			if structuredData[key] != nil && reflect.TypeOf(structuredData[key]).Kind() == reflect.Slice {
-				currentList := structuredData[key].([]interface{})
-				structuredData[key] = append(currentList, value)
+	dataList := parseStrings(data)
+	fmt.Println("data list:", dataList)
+	for _, v := range dataList {
+		for key, val := range v {
+			fmt.Println("key:", key)
+			fmt.Println("val:", val)
+			fmt.Println("structuredData[key]:", structuredData[key])
+			if structuredData[key] == nil {
+				fmt.Println("existing value not found")
+				structuredData[key] = val
+			} else if reflect.TypeOf(structuredData[key]).Kind() == reflect.Map && reflect.TypeOf(val).Kind() == reflect.Map {
+				m := val.(map[string]interface{})
+				for mKey, mVal := range m {
+					structuredData[key].(map[string]interface{})[mKey] = mVal
+				}
 			} else {
-				structuredData[key] = []interface{}{value}
+				fmt.Printf("data exists at key %s: %v\n", key, structuredData[key])
 			}
-		} else {
-			structuredData[key] = value
 		}
 	}
 
@@ -54,37 +38,79 @@ func Decode(data []string) (string, error) {
 	return string(bytes), nil
 }
 
-// func parseKeyValue(key string, value string) interface{} {
-// 	leftBracketIdx := -1
-// 	rightBracketIdx := -1
-// 	slashIdx := -1
-// 	for i, v := range key {
-// 		char := string(v)
-// 		if leftBracketIdx == -1 && char == "[" {
-// 			leftBracketIdx = i
-// 		} else if rightBracketIdx == -1 && char == "]" {
-// 			rightBracketIdx = i
-// 		} else if slashIdx == -1 && char == "/" {
-// 			slashIdx = i
-// 		}
-// 		if leftBracketIdx > -1 && rightBracketIdx > -1 && slashIdx > -1 {
-// 			break
-// 		}
-// 	}
-// 	if slashIdx > -1 {
-// 		data := make(map[string]interface{})
-// 		k := key[0:slashIdx]
-// 		v := parseKeyValue(key[slashIdx+1:], value)
-// 		data[k] = v
-// 		return data
-// 	}
-// 	if leftBracketIdx > -1 && rightBracketIdx > -1 {
-// 		data := []string{}
-// 		k := key[slashIdx+1 : leftBracketIdx]
-// 		index := int(key[leftBracketIdx+1])
-// 		v := []string{value}
+func parseStrings(list []string) []map[string]interface{} {
+	maps := make([]map[string]interface{}, 0)
+	for _, val := range list {
+		values := strings.Split(val, "=")
+		k := values[0]
 
-// 	}
+		v := values[1]
+		value := strings.TrimPrefix(v, `"`)
+		value = strings.TrimSuffix(value, `"`)
 
-// 	return nil
-// }
+		maps = append(maps, parseString(k, value, maps...))
+	}
+	return maps
+}
+
+func parseString(key string, value interface{}, data ...map[string]interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+	slashIndex := strings.Index(key, "/")
+	leftBracketIndex := strings.Index(key, "[")
+	if slashIndex > -1 {
+		object := parseString(key[slashIndex+1:], value, data...)
+		result[key[:slashIndex]] = object
+		fmt.Println("result after slashIndex parsing:", result)
+		// return result
+	} else if leftBracketIndex > -1 {
+		rightBracketIndex := strings.Index(key, "]")
+		if rightBracketIndex > -1 {
+			k := key[:leftBracketIndex]
+			if rightBracketIndex+1 < len(key) {
+				result[k] = parseString(key[rightBracketIndex+1:], value, data...)
+			}
+			found := false
+			for _, v := range data {
+				fmt.Println("v:", v)
+				fmt.Println("k:", k)
+				for mKey, mVal := range v {
+					fmt.Println("mKey:", mKey)
+					fmt.Println("mVal:", mVal)
+					kind := reflect.TypeOf(mVal).Kind()
+					if kind == reflect.Map {
+						for mapKey, mapVal := range mVal.(map[string]interface{}) {
+							if mapKey == k {
+								d := make(map[string]interface{})
+								d[mapKey] = mapVal
+								result[mKey] = d
+								found = true
+							}
+						}
+					}
+				}
+				if v[k] != nil {
+					kind := reflect.TypeOf(v[k]).Kind()
+					if kind == reflect.Map {
+						for mapKey, mapVal := range v[k].(map[string]interface{}) {
+							fmt.Println("mapKey:", mapKey)
+							fmt.Println("mapVal:", mapVal)
+						}
+					}
+					if kind == reflect.Slice {
+						fmt.Println("appending...")
+						result[k] = append(v[k].([]interface{}), value)
+					}
+					found = true
+				}
+			}
+			if !found {
+				fmt.Println("replacing...")
+				result[k] = []interface{}{value}
+			}
+			// return result
+		}
+	} else {
+		result[key] = value
+	}
+	return result
+}
